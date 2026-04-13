@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lua AI Agent</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #1e1e2e; color: #cdd6f4; margin: 0; padding: 20px; display: flex; justify-content: center; height: 100vh; box-sizing: border-box; }
+
+        /* УВЕЛИЧИЛИ ШИРИНУ ЧАТА до 1100px */
+        .chat-container { width: 100%; max-width: 1100px; display: flex; flex-direction: column; background: #181825; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); overflow: hidden; }
+
+        .chat-header { padding: 15px 20px; background: #11111b; font-weight: bold; font-size: 1.2em; border-bottom: 1px solid #313244; display: flex; justify-content: space-between; }
+        .chat-header span.badge { font-size: 0.7em; background: #a6e3a1; color: #11111b; padding: 3px 8px; border-radius: 12px; }
+        .chat-history { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; }
+        .msg { max-width: 85%; padding: 12px 16px; border-radius: 8px; line-height: 1.5; }
+        .msg.user { align-self: flex-end; background: #89b4fa; color: #11111b; }
+        .msg.bot { align-self: flex-start; background: #313244; color: #cdd6f4; border-left: 4px solid #a6e3a1; width: 100%; box-sizing: border-box;}
+
+        pre { background: #1e1e2e; padding: 15px; border-radius: 6px; overflow-x: auto; color: #a6e3a1; margin-top: 10px; font-family: 'Courier New', Courier, monospace; font-size: 1.05em; }
+
+        .chat-input { display: flex; padding: 15px; background: #11111b; border-top: 1px solid #313244; }
+        input { flex: 1; padding: 12px; background: #1e1e2e; border: 1px solid #313244; color: #cdd6f4; border-radius: 6px; outline: none; font-size: 1em; }
+        button { padding: 12px 24px; margin-left: 10px; background: #89b4fa; border: none; border-radius: 6px; color: #11111b; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        button:hover { background: #b4befe; }
+        .loader { display: none; align-self: flex-start; font-style: italic; color: #a6adc8; padding-left: 20px; margin-bottom: 10px; }
+        .copy-btn { margin-top: 10px; background: #45475a; color: #cdd6f4; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 0.9em; transition: 0.2s; }
+        .copy-btn:hover { background: #585b70; }
+
+        /* СТИЛИ ДЛЯ ВСПЛЫВАЮЩЕГО УВЕДОМЛЕНИЯ (TOAST) */
+        .toast {
+            visibility: hidden;
+            min-width: 250px;
+            background-color: #a6e3a1;
+            color: #11111b;
+            text-align: center;
+            border-radius: 8px;
+            padding: 16px;
+            position: fixed;
+            z-index: 1000;
+            left: 50%;
+            bottom: 30px;
+            transform: translateX(-50%);
+            font-weight: bold;
+            box-shadow: 0px 4px 15px rgba(0,0,0,0.3);
+            transition: visibility 0s, opacity 0.3s linear;
+            opacity: 0;
+        }
+        .toast.show {
+            visibility: visible;
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+
+<div class="chat-container">
+    <div class="chat-header">
+        Lua AI Agent <span class="badge">Local & Secure</span>
+    </div>
+    <div class="chat-history" id="chat">
+        <div class="msg bot">Привет! Опишите задачу, и я сгенерирую для вас Lua-скрипт под среду LowCode.</div>
+    </div>
+    <div class="loader" id="loader">⚙️ Агент думает и компилирует код...</div>
+    <div class="chat-input">
+        <button onclick="clearContext()" style="background: #f38ba8; margin-right: 10px; margin-left: 0;">🗑️ Очистить</button>
+        <input type="text" id="userInput" placeholder="Напишите задачу или уточнение..." onkeypress="handleEnter(event)">
+        <button onclick="sendMessage()">Отправить</button>
+    </div>
+</div>
+
+<!-- Блок для Toast уведомления -->
+<div id="toast" class="toast">✅ Код успешно скопирован!</div>
+
+<script>
+    let lastGeneratedCode = "";
+    async function sendMessage() {
+        const input = document.getElementById('userInput');
+        const text = input.value.trim();
+        if (!text) return;
+
+        addMessage(text, 'user');
+        input.value = '';
+        document.getElementById('loader').style.display = 'block';
+
+        try {
+            // Отправляем запрос с "памятью" в поле context
+            const requestBody = {
+                prompt: text,
+                context: lastGeneratedCode ? `Текущий код для доработки:\n${lastGeneratedCode}` : ""
+            };
+
+            const response = await fetch('/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(requestBody)
+            });
+
+            const data = await response.json();
+            addCodeMessage(data.code);
+
+            // Если ответ начинается с комментария (уточняющий вопрос от агента), не сохраняем его в память
+            if (data.code && !data.code.startsWith("-- Пожалуйста") && !data.code.startsWith("-- Внимание") && !data.code.startsWith("-- Уточните")) {
+                lastGeneratedCode = data.code;
+            }
+
+        } catch (error) {
+            addMessage("Ошибка соединения с сервером.", 'bot');
+        } finally {
+            document.getElementById('loader').style.display = 'none';
+        }
+    }
+
+    function addMessage(text, sender) {
+        const chat = document.getElementById('chat');
+        const msgDiv = document.createElement('div');
+        msgDiv.className = `msg ${sender}`;
+        msgDiv.innerText = text;
+        chat.appendChild(msgDiv);
+        chat.scrollTop = chat.scrollHeight;
+    }
+
+    function addCodeMessage(code) {
+        const chat = document.getElementById('chat');
+        const msgDiv = document.createElement('div');
+        msgDiv.className = `msg bot`;
+
+        const codeId = 'code-' + Date.now();
+
+        msgDiv.innerHTML = `
+            <pre><code id="${codeId}">${code}</code></pre>
+            <button class="copy-btn" onclick="copyText('${codeId}')">📋 Скопировать код</button>
+        `;
+        chat.appendChild(msgDiv);
+        chat.scrollTop = chat.scrollHeight;
+    }
+
+    function handleEnter(e) {
+        if (e.key === 'Enter') sendMessage();
+    }
+
+    function copyText(elementId) {
+        const text = document.getElementById(elementId).innerText;
+        navigator.clipboard.writeText(text).then(() => {
+            // Показываем Toast
+            const toast = document.getElementById("toast");
+            toast.className = "toast show";
+            // Прячем через 2.5 секунды
+            setTimeout(function(){
+                toast.className = toast.className.replace("show", "");
+            }, 2500);
+        }).catch(err => {
+            console.error('Ошибка копирования: ', err);
+        });
+    }
+
+    function clearContext() {
+        lastGeneratedCode = ""; // Стираем память!
+        document.getElementById('chat').innerHTML = '<div class="msg bot">Контекст очищен. Я готов к новой задаче!</div>';
+    }
+</script>
+
+</body>
+</html>

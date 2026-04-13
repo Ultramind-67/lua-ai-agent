@@ -1,0 +1,50 @@
+[
+  {
+    "id": "last_element",
+    "keywords": ["последний", "элемент", "массив", "конец", "email"],
+    "code": "return wf.vars.emails[#wf.vars.emails]",
+    "description": "Получение последнего элемента массива"
+  },
+  {
+    "id": "counter",
+    "keywords": ["счетчик", "увеличивай", "значение", "итерация", "try_count"],
+    "code": "return wf.vars.try_count_n + 1",
+    "description": "Увеличение счетчика"
+  },
+  {
+    "id": "clear_vars",
+    "keywords": ["очисти", "значения", "переменных", "удалить", "restbody", "id"],
+    "code": "local result = wf.vars.RESTbody.result\nfor _, e in pairs(result) do\n  for k, v in pairs(e) do\n    if k ~= 'ID' and k ~= 'ENTITY_ID' and k ~= 'CALL' then\n      e[k] = nil\n    end\n  end\nend\nreturn result",
+    "description": "Очистка ключей в массиве объектов"
+  },
+  {
+    "id": "iso_8601",
+    "keywords": ["время", "стандарт", "iso 8601", "преобразуй", "формат", "дату"],
+    "code": "local DATUM = wf.vars.json.IDOC.ZCDF_HEAD.DATUM\nlocal TIME = wf.vars.json.IDOC.ZCDF_HEAD.TIME\nlocal year = string.sub(DATUM, 1, 4)\nlocal month = string.sub(DATUM, 5, 6)\nlocal day = string.sub(DATUM, 7, 8)\nlocal hour = string.sub(TIME, 1, 2)\nlocal min = string.sub(TIME, 3, 4)\nlocal sec = string.sub(TIME, 5, 6)\nreturn string.format('%s-%s-%sT%s:%s:%s.00000Z', year, month, day, hour, min, sec)",
+    "description": "Сборка даты в ISO 8601"
+  },
+  {
+    "id": "type_check",
+    "keywords": ["тип", "данных", "массив", "преобразовать", "структуру", "items"],
+    "code": "local function ensureArray(t)\n  if type(t) ~= 'table' then return {t} end\n  local isArray = true\n  for k, _ in pairs(t) do\n    if type(k) ~= 'number' or math.floor(k) ~= k then isArray = false break end\n  end\n  return isArray and t or {t}\nend\n-- Пример обхода структуры:\n-- obj.items = ensureArray(obj.items)",
+    "description": "Проверка типа данных массива"
+  },
+  {
+    "id": "filter_array",
+    "keywords": ["отфильтруй", "элементы", "массива", "включить", "только", "discount"],
+    "code": "local result = _utils.array.new()\nlocal items = wf.vars.parsedCsv\nfor _, item in ipairs(items) do\n  if (item.Discount ~= '' and item.Discount ~= nil) or (item.Markdown ~= '' and item.Markdown ~= nil) then\n    table.insert(result, item)\n  end\nend\nreturn result",
+    "description": "Фильтрация элементов массива"
+  },
+  {
+    "id": "add_code",
+    "keywords": ["добавь", "переменную", "квадрат", "существующего"],
+    "code": "local n = tonumber('5')\nreturn n * n",
+    "description": "Дополнение существующего кода (квадрат числа)"
+  },
+  {
+    "id": "convert_unix",
+    "keywords": ["конвертируй", "время", "unix", "epoch", "recalltime"],
+    "code": "local dt = wf.initVariables.recallTime\nlocal y, m, d, h, min, s = string.match(dt, '(%d+)-(%d+)-(%d+)T(%d+):(%d+):(%d+)')\nreturn os.time({year=y, month=m, day=d, hour=h, min=min, sec=s})",
+    "description": "Конвертация в Unix time через os.time и регулярки"
+  }
+]
