@@ -3,52 +3,282 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lua AI Agent</title>
+    <title>Lua AI Agent | MTS Style</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #1e1e2e; color: #cdd6f4; margin: 0; padding: 20px; display: flex; justify-content: center; height: 100vh; box-sizing: border-box; }
+        /* ================= ДИЗАЙН СИСТЕМА (ПЕРЕМЕННЫЕ) ================= */
+        :root {
+            /* Светлая тема (по умолчанию) */
+            --bg-page: #f2f2f2;
+            --bg-chat: #ffffff;
+            --bg-header: #ffffff;
+            --bg-input-area: #ffffff;
+            --bg-user-msg: #f0f0f0;
+            --bg-bot-msg: #ffffff;
+            --bg-code: #f8f9fa;
+            --text-main: #000000;
+            --text-code: #000000; /* Сделали черным */
+            --border-color: #e5e5e5;
+            --primary-red: #E30611;
+            --primary-red-hover: #cc050f;
+            --btn-clear: #000000;
+            --btn-clear-hover: #333333;
+            --shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+        }
 
-        /* УВЕЛИЧИЛИ ШИРИНУ ЧАТА до 1100px */
-        .chat-container { width: 100%; max-width: 1100px; display: flex; flex-direction: column; background: #181825; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); overflow: hidden; }
+        [data-theme="dark"] {
+            /* Темная тема */
+            --bg-page: #121212;
+            --bg-chat: #1a1a1a;
+            --bg-header: #1a1a1a;
+            --bg-input-area: #1a1a1a;
+            --bg-user-msg: #2d2d2d;
+            --bg-bot-msg: #1a1a1a;
+            --bg-code: #252525;
+            --text-main: #ffffff;
+            --text-code: #ffffff; /* Сделали белым */
+            --border-color: #333333;
+            --primary-red: #E30611;
+            --primary-red-hover: #ff1a26;
+            --btn-clear: #333333;
+            --btn-clear-hover: #4d4d4d;
+            --shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+        }
 
-        .chat-header { padding: 15px 20px; background: #11111b; font-weight: bold; font-size: 1.2em; border-bottom: 1px solid #313244; display: flex; justify-content: space-between; }
-        .chat-header span.badge { font-size: 0.7em; background: #a6e3a1; color: #11111b; padding: 3px 8px; border-radius: 12px; }
-        .chat-history { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; }
-        .msg { max-width: 85%; padding: 12px 16px; border-radius: 8px; line-height: 1.5; }
-        .msg.user { align-self: flex-end; background: #89b4fa; color: #11111b; }
-        .msg.bot { align-self: flex-start; background: #313244; color: #cdd6f4; border-left: 4px solid #a6e3a1; width: 100%; box-sizing: border-box;}
+        /* ================= БАЗОВЫЕ СТИЛИ ================= */
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-page);
+            color: var(--text-main);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            height: 100vh;
+            box-sizing: border-box;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
 
-        pre { background: #1e1e2e; padding: 15px; border-radius: 6px; overflow-x: auto; color: #a6e3a1; margin-top: 10px; font-family: 'Courier New', Courier, monospace; font-size: 1.05em; }
+        .chat-container {
+            width: 100%;
+            max-width: 1100px;
+            display: flex;
+            flex-direction: column;
+            background: var(--bg-chat);
+            border-radius: 16px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+            transition: all 0.3s ease;
+        }
 
-        .chat-input { display: flex; padding: 15px; background: #11111b; border-top: 1px solid #313244; }
-        input { flex: 1; padding: 12px; background: #1e1e2e; border: 1px solid #313244; color: #cdd6f4; border-radius: 6px; outline: none; font-size: 1em; }
-        button { padding: 12px 24px; margin-left: 10px; background: #89b4fa; border: none; border-radius: 6px; color: #11111b; font-weight: bold; cursor: pointer; transition: 0.2s; }
-        button:hover { background: #b4befe; }
-        .loader { display: none; align-self: flex-start; font-style: italic; color: #a6adc8; padding-left: 20px; margin-bottom: 10px; }
-        .copy-btn { margin-top: 10px; background: #45475a; color: #cdd6f4; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 0.9em; transition: 0.2s; }
-        .copy-btn:hover { background: #585b70; }
+        /* ================= ШАПКА ================= */
+        .chat-header {
+            padding: 20px 24px;
+            background: var(--bg-header);
+            font-weight: 700;
+            font-size: 1.3em;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
 
-        /* СТИЛИ ДЛЯ ВСПЛЫВАЮЩЕГО УВЕДОМЛЕНИЯ (TOAST) */
+        .header-left { display: flex; align-items: center; gap: 12px; }
+        .badge {
+            font-size: 0.6em;
+            background: var(--primary-red);
+            color: #ffffff;
+            padding: 4px 10px;
+            border-radius: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .theme-btn {
+            background: none;
+            border: 2px solid var(--border-color);
+            color: var(--text-main);
+            font-size: 1.2em;
+            padding: 6px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .theme-btn:hover { border-color: var(--primary-red); }
+
+        /* ================= ИСТОРИЯ ЧАТА ================= */
+        .chat-history {
+            flex: 1;
+            padding: 24px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            scroll-behavior: smooth;
+        }
+
+        /* Кастомизация вертикального скроллбара чата */
+        .chat-history::-webkit-scrollbar { width: 6px; }
+        .chat-history::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 4px; }
+
+        .msg {
+            max-width: 85%;
+            padding: 16px 20px;
+            border-radius: 12px;
+            line-height: 1.6;
+            font-size: 1.05em;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .msg.user {
+            align-self: flex-end;
+            background: var(--bg-user-msg);
+            color: var(--text-main);
+            border-bottom-right-radius: 4px;
+        }
+
+        .msg.bot {
+            align-self: flex-start;
+            background: var(--bg-bot-msg);
+            color: var(--text-main);
+            border-left: 4px solid var(--primary-red);
+            width: 100%;
+            box-sizing: border-box;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+            border-bottom-left-radius: 4px;
+        }
+
+        /* ================= БЛОКИ КОДА И ИХ СКРОЛЛБАР ================= */
+        pre {
+            background: var(--bg-code);
+            padding: 16px;
+            border-radius: 8px;
+            overflow-x: auto;
+            color: var(--text-code);
+            margin-top: 12px;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 0.95em;
+            border: 1px solid var(--border-color);
+            padding-bottom: 20px; /* Чтобы ползунок не перекрывал нижнюю строчку кода */
+        }
+
+        /* Кастомизация горизонтального скроллбара внутри блоков кода */
+        pre::-webkit-scrollbar { height: 6px; }
+        pre::-webkit-scrollbar-track { background: transparent; }
+        pre::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 4px; }
+        pre::-webkit-scrollbar-thumb:hover { background: #999; }
+
+        /* ================= ЗОНА ВВОДА ================= */
+        .chat-input-wrapper {
+            background: var(--bg-input-area);
+            border-top: 1px solid var(--border-color);
+            padding: 20px 24px;
+        }
+
+        .loader {
+            display: none;
+            font-style: italic;
+            color: var(--primary-red);
+            margin-bottom: 12px;
+            font-size: 0.9em;
+            font-weight: 600;
+        }
+
+        .chat-input {
+            display: flex;
+            align-items: flex-end;
+            gap: 12px;
+        }
+
+        textarea {
+            flex: 1;
+            padding: 14px 16px;
+            background: var(--bg-page);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            border-radius: 12px;
+            outline: none;
+            font-size: 1em;
+            font-family: inherit;
+            resize: none;
+            min-height: 24px;
+            max-height: 200px;
+            overflow-y: auto;
+            line-height: 1.5;
+            transition: border-color 0.2s;
+            box-sizing: border-box;
+        }
+        textarea:focus { border-color: var(--primary-red); }
+
+        /* Скрываем скроллбар для окна ввода во всех современных браузерах */
+        textarea {
+            scrollbar-width: none; /* Для Firefox */
+            -ms-overflow-style: none;  /* Для Internet Explorer и Edge (старых версий) */
+        }
+
+        /* Скрываем скроллбар для WebKit браузеров (Chrome, Safari, новые Edge) */
+        textarea::-webkit-scrollbar {
+            display: none;
+        }
+
+        button {
+            padding: 14px 24px;
+            background: var(--primary-red);
+            border: none;
+            border-radius: 12px;
+            color: #ffffff;
+            font-weight: 700;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            height: 52px;
+            white-space: nowrap;
+        }
+
+        button:hover { background: var(--primary-red-hover); transform: translateY(-1px); }
+        button:active { transform: translateY(2px); }
+
+        .btn-clear { background: var(--btn-clear); color: #fff;}
+        .btn-clear:hover { background: var(--btn-clear-hover); }
+
+        .copy-btn {
+            margin-top: 12px;
+            background: var(--bg-page);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            height: 40px;
+            padding: 0 16px;
+        }
+        .copy-btn:hover { background: var(--border-color); color: var(--text-main); }
+
+        /* ================= TOAST (УВЕДОМЛЕНИЕ) ================= */
         .toast {
             visibility: hidden;
             min-width: 250px;
-            background-color: #a6e3a1;
-            color: #11111b;
+            background-color: var(--primary-red);
+            color: #ffffff;
             text-align: center;
             border-radius: 8px;
             padding: 16px;
             position: fixed;
             z-index: 1000;
             left: 50%;
-            bottom: 30px;
-            transform: translateX(-50%);
+            bottom: 40px;
+            transform: translateX(-50%) translateY(20px);
             font-weight: bold;
-            box-shadow: 0px 4px 15px rgba(0,0,0,0.3);
-            transition: visibility 0s, opacity 0.3s linear;
+            box-shadow: 0px 10px 30px rgba(227, 6, 17, 0.4);
+            transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
             opacity: 0;
         }
         .toast.show {
             visibility: visible;
             opacity: 1;
+            transform: translateX(-50%) translateY(0);
         }
     </style>
 </head>
@@ -56,35 +286,74 @@
 
 <div class="chat-container">
     <div class="chat-header">
-        Lua AI Agent <span class="badge">Local & Secure</span>
+        <div class="header-left">
+            LocalScript AI <span class="badge">LowCode Ready</span>
+        </div>
+        <button class="theme-btn" onclick="toggleTheme()" id="themeIcon">🌙</button>
     </div>
+
     <div class="chat-history" id="chat">
         <div class="msg bot">Привет! Опишите задачу, и я сгенерирую для вас Lua-скрипт под среду LowCode.</div>
     </div>
-    <div class="loader" id="loader">⚙️ Агент думает и компилирует код...</div>
-    <div class="chat-input">
-        <button onclick="clearContext()" style="background: #f38ba8; margin-right: 10px; margin-left: 0;">🗑️ Очистить</button>
-        <input type="text" id="userInput" placeholder="Напишите задачу или уточнение..." onkeypress="handleEnter(event)">
-        <button onclick="sendMessage()">Отправить</button>
+
+    <div class="chat-input-wrapper">
+        <div class="loader" id="loader">⚙️ Агент компилирует код...</div>
+        <div class="chat-input">
+            <button class="btn-clear" onclick="clearContext()">🗑️ Очистить</button>
+            <textarea id="userInput" rows="1" placeholder="Напишите задачу" onkeydown="handleEnter(event)"></textarea>
+            <button onclick="sendMessage()">Отправить</button>
+        </div>
     </div>
 </div>
 
-<!-- Блок для Toast уведомления -->
 <div id="toast" class="toast">✅ Код успешно скопирован!</div>
 
 <script>
+    // ================= ЛОГИКА ТЕМЫ (СВЕТЛАЯ/ТЕМНАЯ) =================
+    function toggleTheme() {
+        const body = document.body;
+        const icon = document.getElementById('themeIcon');
+        if (body.getAttribute('data-theme') === 'dark') {
+            body.removeAttribute('data-theme');
+            icon.innerText = '🌙';
+            localStorage.setItem('theme', 'light');
+        } else {
+            body.setAttribute('data-theme', 'dark');
+            icon.innerText = '☀️';
+            localStorage.setItem('theme', 'dark');
+        }
+    }
+
+    // Загрузка сохраненной темы
+    if (localStorage.getItem('theme') === 'dark') {
+        document.body.setAttribute('data-theme', 'dark');
+        document.getElementById('themeIcon').innerText = '☀️';
+    }
+
+    // ================= АВТОРАСШИРЕНИЕ ПОЛЯ ВВОДА =================
+    const textarea = document.getElementById('userInput');
+    textarea.addEventListener('input', function() {
+        this.style.height = 'auto'; // Сбрасываем высоту
+        this.style.height = (this.scrollHeight) + 'px'; // Устанавливаем по контенту
+        if (this.value === '') this.style.height = 'auto'; // Возврат к стандарту если пусто
+    });
+
+    // ================= ОСНОВНАЯ ЛОГИКА АГЕНТА =================
     let lastGeneratedCode = "";
+
     async function sendMessage() {
-        const input = document.getElementById('userInput');
-        const text = input.value.trim();
+        const text = textarea.value.trim();
         if (!text) return;
 
         addMessage(text, 'user');
-        input.value = '';
+
+        // Очистка и сброс размера поля ввода
+        textarea.value = '';
+        textarea.style.height = 'auto';
+
         document.getElementById('loader').style.display = 'block';
 
         try {
-            // Отправляем запрос с "памятью" в поле context
             const requestBody = {
                 prompt: text,
                 context: lastGeneratedCode ? `Текущий код для доработки:\n${lastGeneratedCode}` : ""
@@ -99,7 +368,7 @@
             const data = await response.json();
             addCodeMessage(data.code);
 
-            // Если ответ начинается с комментария (уточняющий вопрос от агента), не сохраняем его в память
+            // Сохраняем код, если это не комментарий-предупреждение
             if (data.code && !data.code.startsWith("-- Пожалуйста") && !data.code.startsWith("-- Внимание") && !data.code.startsWith("-- Уточните")) {
                 lastGeneratedCode = data.code;
             }
@@ -135,17 +404,20 @@
         chat.scrollTop = chat.scrollHeight;
     }
 
+    // ================= ОБРАБОТКА ENTER И SHIFT+ENTER =================
     function handleEnter(e) {
-        if (e.key === 'Enter') sendMessage();
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault(); // Предотвращаем перенос строки
+            sendMessage();
+        }
+        // Если нажат Shift + Enter, e.preventDefault() не вызывается, textarea делает перенос строки
     }
 
     function copyText(elementId) {
         const text = document.getElementById(elementId).innerText;
         navigator.clipboard.writeText(text).then(() => {
-            // Показываем Toast
             const toast = document.getElementById("toast");
             toast.className = "toast show";
-            // Прячем через 2.5 секунды
             setTimeout(function(){
                 toast.className = toast.className.replace("show", "");
             }, 2500);
@@ -155,7 +427,7 @@
     }
 
     function clearContext() {
-        lastGeneratedCode = ""; // Стираем память!
+        lastGeneratedCode = "";
         document.getElementById('chat').innerHTML = '<div class="msg bot">Контекст очищен. Я готов к новой задаче!</div>';
     }
 </script>

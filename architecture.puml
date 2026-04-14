@@ -1,4 +1,3 @@
-```plantuml
 @startuml C4_Container
 !include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
 
@@ -6,32 +5,36 @@ title Container Diagram for LocalScript AI Agent (LowCode)
 
 Person(user, "User / Testing System", "Запрашивает генерацию или доработку Lua-кода")
 
-System_Boundary(c1, "Local AI Agent System") {
+System_Boundary(system, "Local AI Agent System") {
 
-    Container(ui, "Web Interface", "Vanilla JS / HTML", "Предоставляет чат. Хранит 'state' (lastGeneratedCode) для итеративной доработки.")
+    Container(ui, "Web Interface (SPA)", "Vanilla JS / HTML", "Предоставляет чат. Хранит 'state' (lastGeneratedCode) для итеративной доработки. Отдается сервером FastAPI.")
 
-    Container(api, "Agent API Gateway", "FastAPI (Python)", "Предоставляет REST API /generate. Stateless архитектура.")
+    System_Boundary(agent_container, "Docker: lua_agent_api") {
+        Container(api, "Agent API Gateway", "FastAPI (Python)", "Предоставляет REST API /generate и отдает UI (HTMLResponse). Stateless.")
 
-    Container(langgraph, "State Machine Agent", "LangGraph (Python)", "Оркестратор. Маршрутизирует: Анализ -> RAG -> Генерация -> Валидация -> Рефлексия.")
+        Container(langgraph, "State Machine Agent", "LangGraph (Python)", "Оркестратор. Маршрутизирует: RAG -> Генерация -> Валидация -> Рефлексия.")
 
-    ContainerDb(templates, "Knowledge Base (RAG)", "JSON", "Хранит эталонные шаблоны. Выдает код через Keyword Scoring.")
+        Container(templates, "Knowledge Base (RAG)", "JSON", "templates.json. Выдает код через Keyword Scoring.")
 
-    Container(ollama, "LLM Server", "Ollama (C++/Go)", "qwen2.5-coder:7b. Limit: 8GB VRAM. Parameters: num_predict=256, num_ctx=4096.")
+        Container(linter, "Validation Engine", "Subprocess (luac 5.4 & luacheck)", "CLI-утилиты ОС. Двухуровневая проверка: синтаксис и статический анализ.")
+    }
 
-    Container(linter, "Validation Engine", "luac & luacheck", "Двухуровневая проверка: синтаксис и статический анализ (учитывает глобалки wf, _utils).")
+    System_Boundary(ollama_container, "Docker: local_ollama") {
+        Container(ollama, "LLM Server", "Ollama (C++/Go)", "qwen2.5-coder:7b. Limit: 8GB VRAM. Parameters: num_predict=256, num_ctx=4096.")
+    }
 }
 
 Rel(user, ui, "Вводит prompt", "Браузер")
-Rel(user, api, "POST /generate (prompt + context)", "JSON")
+Rel(user, api, "POST /generate", "JSON")
 Rel(ui, api, "POST /generate (prompt + context)", "JSON")
 
-Rel(api, langgraph, "Инициирует граф состояний")
-Rel(langgraph, templates, "Ищет шаблоны по тегам", "Read")
-Rel(langgraph, ollama, "Промпты + XML-шаблоны", "REST")
+Rel(api, langgraph, "Инициирует граф состояний (AgentState)")
+Rel(langgraph, templates, "Ищет шаблоны по тегам", "Read local file")
+Rel(langgraph, ollama, "Промпты + XML-шаблоны", "REST (HTTP 11434)")
 Rel(ollama, langgraph, "Сгенерированный Lua-код")
 
-Rel(langgraph, linter, "Передает код на проверку")
-Rel(linter, langgraph, "Возвращает Syntax/Static Errors или OK")
+Rel(langgraph, linter, "Передает код во временный файл .lua")
+Rel(linter, langgraph, "Возвращает stdout/stderr (Errors или OK)")
 
 Rel(langgraph, ollama, "Self-Reflection (до 3 итераций)", "Если найдена ошибка luacheck")
 
