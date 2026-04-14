@@ -1,20 +1,38 @@
-  ```plantuml
+```plantuml
 @startuml C4_Container
 !include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
 
-Person(user, "Developer / User", "Запрашивает генерацию Lua-кода")
+title Container Diagram for LocalScript AI Agent (LowCode)
+
+Person(user, "User / Testing System", "Запрашивает генерацию или доработку Lua-кода")
+
 System_Boundary(c1, "Local AI Agent System") {
-    Container(api, "Agent API (FastAPI)", "Python", "Предоставляет REST API /generate")
-    Container(langgraph, "State Machine Agent", "LangGraph", "Маршрутизирует: Анализ -> RAG -> Генерация -> Валидация")
-    Container(lua_compiler, "Local Lua Compiler", "luac 5.4", "Проверяет синтаксис (luac -p) без выполнения кода")
-    ContainerDb(templates, "Knowledge Base", "Filesystem", "Хранит .lua шаблоны")
-    Container(ollama, "LLM Server (Ollama)", "C++/Go", "Хостит qwen2.5-coder:7b. Лимит 8GB VRAM.")
+
+    Container(ui, "Web Interface", "Vanilla JS / HTML", "Предоставляет чат. Хранит 'state' (lastGeneratedCode) для итеративной доработки.")
+
+    Container(api, "Agent API Gateway", "FastAPI (Python)", "Предоставляет REST API /generate. Stateless архитектура.")
+
+    Container(langgraph, "State Machine Agent", "LangGraph (Python)", "Оркестратор. Маршрутизирует: Анализ -> RAG -> Генерация -> Валидация -> Рефлексия.")
+
+    ContainerDb(templates, "Knowledge Base (RAG)", "JSON", "Хранит эталонные шаблоны. Выдает код через Keyword Scoring.")
+
+    Container(ollama, "LLM Server", "Ollama (C++/Go)", "qwen2.5-coder:7b. Limit: 8GB VRAM. Parameters: num_predict=256, num_ctx=4096.")
+
+    Container(linter, "Validation Engine", "luac & luacheck", "Двухуровневая проверка: синтаксис и статический анализ (учитывает глобалки wf, _utils).")
 }
 
-Rel(user, api, "POST /generate", "JSON")
-Rel(api, langgraph, "Инициирует граф")
-Rel(langgraph, templates, "Читает шаблоны (RAG)")
-Rel(langgraph, ollama, "Промпты", "REST")
-Rel(langgraph, lua_compiler, "Передает сгенерированный код на проверку")
-Rel(lua_compiler, langgraph, "Возвращает Syntax Errors или OK")
+Rel(user, ui, "Вводит prompt", "Браузер")
+Rel(user, api, "POST /generate (prompt + context)", "JSON")
+Rel(ui, api, "POST /generate (prompt + context)", "JSON")
+
+Rel(api, langgraph, "Инициирует граф состояний")
+Rel(langgraph, templates, "Ищет шаблоны по тегам", "Read")
+Rel(langgraph, ollama, "Промпты + XML-шаблоны", "REST")
+Rel(ollama, langgraph, "Сгенерированный Lua-код")
+
+Rel(langgraph, linter, "Передает код на проверку")
+Rel(linter, langgraph, "Возвращает Syntax/Static Errors или OK")
+
+Rel(langgraph, ollama, "Self-Reflection (до 3 итераций)", "Если найдена ошибка luacheck")
+
 @enduml
