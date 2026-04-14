@@ -30,7 +30,7 @@ Rel(ui, api, "POST /generate (prompt + context)", "JSON")
 
 Rel(api, langgraph, "Инициирует граф состояний (AgentState)")
 Rel(langgraph, templates, "Ищет шаблоны по тегам", "Read local file")
-Rel(langgraph, ollama, "Промпты + XML-шаблоны", "REST (HTTP 11434)")
+Rel(langgraph, ollama, "Промпты + XML-шаблоны", "")
 Rel(ollama, langgraph, "Сгенерированный Lua-код")
 
 Rel(langgraph, linter, "Передает код во временный файл .lua")

@@ -56,32 +56,41 @@ def retrieve_template(state: AgentState) -> Dict:
                 max_score = score
                 best_match = tpl
 
-        # Если нашли хотя бы 1-2 совпадения, отдаем шаблон LLM как подсказку
-        if max_score >= 1 and best_match:
-            print(
-                f"DEBUG: RAG сработал! Найден шаблон: {best_match['id']}")  # Оставим хотя бы обычный принт для отладки
-            best_template = (
-                f"<instruction>\n"
-                f"MANDATORY TEMPLATE DETECTED. You MUST use the EXACT logic, functions (e.g. string.sub), and structure shown in the template below.\n"
-                f"DO NOT compress the logic. DO NOT use string.format instead of string.sub.\n"
-                f"Adapt variable names AND literal values (like numbers or strings) to match the user's Task.\n"
-                f"</instruction>\n"
-                f"<template>\n{best_match['code']}\n</template>"
-            )
+            # Если нашли совпадения, отдаем шаблон как БАЗОВУЮ структуру, но разрешаем расширять
+            if max_score >= 2 and best_match:
+                print(f"DEBUG: RAG сработал! Найден шаблон: {best_match['id']}")
+                best_template = (
+                    f"<instruction>\n"
+                    f"MANDATORY BASELINE TEMPLATE. You MUST use the core algorithm and platform functions (e.g. string.sub) shown in the template below.\n"
+                    f"HOWEVER, you are allowed to EXTEND and MODIFY this logic (add conditions, loops, or change variable names) IF the user's specific task requires it.\n"
+                    f"</instruction>\n"
+                    f"<template>\n{best_match['code']}\n</template>"
+                )
 
     except Exception as e:
         print(f"Error loading templates: {e}")
 
     return {"template_used": best_template}
 
+
 def generate_code(state: AgentState) -> Dict:
-    """Генерация кода с учетом LowCode специфики и лимита в 256 токенов."""
     user_prompt = state["prompt"]
     context_data = state.get("context", "")
 
+    # GUARDRAIL: Мощная защита от доработки "пустоты"
     if not context_data:
-        trigger_words = ["в этот", "в данный", "текущий", "к этому", "сюда"]
-        if any(word in user_prompt.lower() for word in trigger_words):
+        prompt_lower = user_prompt.lower().strip()
+
+        # Глаголы, которые обычно означают доработку существующего кода
+        action_verbs = ["добавь", "измени", "удали", "исправь", "замени", "перепиши", "допиши", "сделай проверку"]
+        # Указатели на существующий код
+        pointers = ["в этот", "в данный", "текущий", "к этому", "сюда", "в код", "в функцию", "в массив"]
+
+        # Если запрос начинается с глагола доработки ИЛИ содержит указатель
+        is_modification = any(prompt_lower.startswith(v) for v in action_verbs) or \
+                          any(p in prompt_lower for p in pointers)
+
+        if is_modification:
             return {
                 "code": "-- Пожалуйста, предоставьте исходный код для доработки.",
                 "iterations": state.get("iterations", 0) + 1

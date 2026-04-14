@@ -22,7 +22,7 @@ services:
       - OLLAMA_MAX_QUEUE=1
     # При старте автоматически скачиваем нужную модель (весит ~4.7 GB, помещается в 8GB VRAM)
     entrypoint: >
-      /bin/sh -c "ollama serve & sleep 5 && ollama pull qwen2.5-coder:7b && wait"
+      /bin/sh -c "ollama serve & sleep 5 && if ! ollama list | grep -q 'qwen2.5-coder:7b'; then ollama pull qwen2.5-coder:7b; fi && wait"
 
   # Наш Агент
   agent_api:
