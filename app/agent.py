@@ -64,7 +64,7 @@ def retrieve_template(state: AgentState) -> Dict:
                 f"<instruction>\n"
                 f"MANDATORY TEMPLATE DETECTED. You MUST use the EXACT logic, functions (e.g. string.sub), and structure shown in the template below.\n"
                 f"DO NOT compress the logic. DO NOT use string.format instead of string.sub.\n"
-                f"Adapt ONLY the variable names to match the Task.\n"
+                f"Adapt variable names AND literal values (like numbers or strings) to match the user's Task.\n"
                 f"</instruction>\n"
                 f"<template>\n{best_match['code']}\n</template>"
             )
@@ -110,7 +110,7 @@ def generate_code(state: AgentState) -> Dict:
         "4. Output ONLY VALID LUA CODE. No markdown tags like ```lua.\n"
         "5. ALWAYS return the final result using the 'return' statement.\n"
         "6. SCOPE LIMIT: You write SMALL LowCode snippets. If the prompt asks for a massive system, ONLY output: '-- Задача слишком объемна для одного скрипта.'\n"
-        "7. MISSING CODE: If the user explicitly says 'modify this code', 'add to this', or 'fix this' BUT provides NO context, YOU MUST ONLY output: '-- Пожалуйста, предоставьте исходный код'. Do NOT invent or hallucinate code.\n"
+        "7. MODIFYING CODE: If the user asks to modify/fix code, look at the '<context>' section. If there is no code there, ONLY output: '-- Пожалуйста, предоставьте исходный код'. Do NOT invent code.\n"
         "8. NEVER create global functions. Always use 'local function name()' to pass static analysis.\n"
         "9. STATIC ANALYSIS: Name unused variables as '_' (e.g., 'for _, v in ipairs'). NEVER write '_' as a standalone statement on an empty line.\n"
         "10. Failure to use '_' for unused variables will break static analysis."
@@ -124,7 +124,7 @@ def generate_code(state: AgentState) -> Dict:
     final_user_content += f"Task: {user_prompt}\n"
 
     if context_data:
-        final_user_content += f"Data structure/Context:\n{context_data}\n"
+        final_user_content += f"\n<context>\n{context_data}\n</context>\n"
 
     if errors:
         final_user_content += f"\nFIX THIS SYNTAX ERROR in previous attempt:\n{errors}\n"

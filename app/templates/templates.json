@@ -14,7 +14,7 @@
   {
     "id": "clear_vars",
     "keywords": ["очисти", "значения", "переменных", "удалить", "restbody", "id"],
-    "code": "local result = wf.vars.RESTbody.result\nfor _, e in pairs(result) do\n  for k, v in pairs(e) do\n    if k ~= 'ID' and k ~= 'ENTITY_ID' and k ~= 'CALL' then\n      e[k] = nil\n    end\n  end\nend\nreturn result",
+    "code": "local result = wf.vars.RESTbody.result\nfor _, e in pairs(result) do\n  for k, v in pairs(e) do\n    if k == 'ID' or k == 'ENTITY_ID' or k == 'CALL' then\n      e[k] = nil\n    end\n  end\nend\nreturn result",
     "description": "Очистка ключей в массиве объектов"
   },
   {
@@ -36,15 +36,9 @@
     "description": "Фильтрация элементов массива"
   },
   {
-    "id": "add_code",
-    "keywords": ["добавь", "переменную", "квадрат", "существующего"],
-    "code": "local n = tonumber('5')\nreturn n * n",
-    "description": "Дополнение существующего кода (квадрат числа)"
-  },
-  {
     "id": "convert_unix",
     "keywords": ["конвертируй", "время", "unix", "epoch", "recalltime"],
-    "code": "local dt = wf.initVariables.recallTime\nlocal y, m, d, h, min, s = string.match(dt, '(%d+)-(%d+)-(%d+)T(%d+):(%d+):(%d+)')\nreturn os.time({year=y, month=m, day=d, hour=h, min=min, sec=s})",
-    "description": "Конвертация в Unix time через os.time и регулярки"
+    "code": "local dt = wf.initVariables.recallTime\nif not dt then return nil end\nlocal y,m,d,h,min,s,sign,oh,om = string.match(dt, '(%d+)-(%d+)-(%d+)T(%d+):(%d+):(%d+)([+-])(%d+):(%d+)')\nif not y then return nil end\nlocal epoch = os.time({year=y, month=m, day=d, hour=h, min=min, sec=s})\nlocal offset = (tonumber(oh) * 3600) + (tonumber(om) * 60)\nif sign == '+' then epoch = epoch - offset else epoch = epoch + offset end\nreturn epoch",
+    "description": "Конвертация в Unix time с учетом смещения и валидации (Оптимизировано под 256 токенов)"
   }
 ]
