@@ -56,16 +56,16 @@ def retrieve_template(state: AgentState) -> Dict:
                 max_score = score
                 best_match = tpl
 
-            # Если нашли совпадения, отдаем шаблон как БАЗОВУЮ структуру, но разрешаем расширять
-            if max_score >= 2 and best_match:
-                print(f"DEBUG: RAG сработал! Найден шаблон: {best_match['id']}")
-                best_template = (
-                    f"<instruction>\n"
-                    f"MANDATORY BASELINE TEMPLATE. You MUST use the core algorithm and platform functions (e.g. string.sub) shown in the template below.\n"
-                    f"HOWEVER, you are allowed to EXTEND and MODIFY this logic (add conditions, loops, or change variable names) IF the user's specific task requires it.\n"
-                    f"</instruction>\n"
-                    f"<template>\n{best_match['code']}\n</template>"
-                )
+        # Если нашли совпадения, отдаем шаблон как БАЗОВУЮ структуру, но разрешаем расширять
+        if max_score >= 2 and best_match:
+            print(f"DEBUG: RAG сработал! Найден шаблон: {best_match['id']}")
+            best_template = (
+                f"<instruction>\n"
+                f"MANDATORY BASELINE TEMPLATE. You MUST use the core algorithm and platform functions (e.g. string.sub) shown in the template below.\n"
+                f"HOWEVER, you are allowed to EXTEND and MODIFY this logic (add conditions, loops, or change variable names) IF the user's specific task requires it.\n"
+                f"</instruction>\n"
+                f"<template>\n{best_match['code']}\n</template>"
+            )
 
     except Exception as e:
         print(f"Error loading templates: {e}")
@@ -74,15 +74,21 @@ def retrieve_template(state: AgentState) -> Dict:
 
 
 def generate_code(state: AgentState) -> Dict:
+    """Генерация кода с учетом LowCode специфики и лимита в 256 токенов."""
     user_prompt = state["prompt"]
     context_data = state.get("context", "")
+    errors = state.get("errors", "")
+    template = state.get("template_used", "")
 
-    # GUARDRAIL: Мощная защита от доработки "пустоты"
+    # Отключаем RAG-шаблон при доработке кода, чтобы он не перебивал новые команды
+    if context_data:
+        template = ""
+
+    # GUARDRAIL: защита от доработки "пустоты"
     if not context_data:
         prompt_lower = user_prompt.lower().strip()
-
         # Глаголы, которые обычно означают доработку существующего кода
-        action_verbs = ["добавь", "измени", "удали", "исправь", "замени", "перепиши", "допиши", "сделай проверку"]
+        action_verbs = ["добавь", "измени", "удали", "исправь", "замени", "перепиши", "допиши", "сделай проверку", "убери", "не очищай"]
         # Указатели на существующий код
         pointers = ["в этот", "в данный", "текущий", "к этому", "сюда", "в код", "в функцию", "в массив"]
 
@@ -96,12 +102,6 @@ def generate_code(state: AgentState) -> Dict:
                 "iterations": state.get("iterations", 0) + 1
             }
 
-    full_request = f"Task: {user_prompt}\n"
-    if context_data:
-        full_request += f"Data structure/Context:\n{context_data}\n"
-    errors = state.get("errors", "")
-    template = state.get("template_used", "")
-
     # Если запрос слишком короткий, возвращаем вопрос-комментарий, чтобы не ломать API
     if len(user_prompt.split()) < 3:
         return {
@@ -109,7 +109,7 @@ def generate_code(state: AgentState) -> Dict:
             "iterations": state.get("iterations", 0) + 1
         }
 
-    # Системный промпт
+    # Системный промпт (УЛУЧШЕНО ПРАВИЛО 7)
     system_msg = (
         "You are an expert Lua 5.5 developer for a LowCode platform.\n"
         "STRICT RULES:\n"
@@ -119,12 +119,13 @@ def generate_code(state: AgentState) -> Dict:
         "4. Output ONLY VALID LUA CODE. No markdown tags like ```lua.\n"
         "5. ALWAYS return the final result using the 'return' statement.\n"
         "6. SCOPE LIMIT: You write SMALL LowCode snippets. If the prompt asks for a massive system, ONLY output: '-- Задача слишком объемна для одного скрипта.'\n"
-        "7. MODIFYING CODE: If the user asks to modify/fix code, look at the '<context>' section. If there is no code there, ONLY output: '-- Пожалуйста, предоставьте исходный код'. Do NOT invent code.\n"
+        "7. MODIFYING CODE: If <context> is provided, it contains the OLD code. You MUST apply the user's 'Task' to this OLD code and output the NEW modified code. DO NOT just repeat the old code.\n"
         "8. NEVER create global functions. Always use 'local function name()' to pass static analysis.\n"
         "9. STATIC ANALYSIS: Name unused variables as '_' (e.g., 'for _, v in ipairs'). NEVER write '_' as a standalone statement on an empty line.\n"
         "10. Failure to use '_' for unused variables will break static analysis."
     )
 
+    # Собираем финальный промпт
     final_user_content = ""
 
     if template:
@@ -143,7 +144,6 @@ def generate_code(state: AgentState) -> Dict:
         SystemMessage(content=system_msg),
         HumanMessage(content=final_user_content)
     ])
-
 
     # Очистка вывода от возможных маркдаун-тегов
     code = response.content.replace("```lua", "").replace("```", "").strip()
