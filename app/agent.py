@@ -28,8 +28,8 @@ class AgentState(TypedDict):
     iterations: int
 
 
+#Умный поиск шаблонов через Keyword Scoring
 def retrieve_template(state: AgentState) -> Dict:
-    """Умный поиск шаблонов через Keyword Scoring (вместо жестких if-elif)."""
     user_prompt = state["prompt"].lower()
     best_template = ""
 
@@ -73,8 +73,8 @@ def retrieve_template(state: AgentState) -> Dict:
     return {"template_used": best_template}
 
 
+#Генерация кода с учетом LowCode специфики и лимита в 256 токенов
 def generate_code(state: AgentState) -> Dict:
-    """Генерация кода с учетом LowCode специфики и лимита в 256 токенов."""
     user_prompt = state["prompt"]
     context_data = state.get("context", "")
     errors = state.get("errors", "")
@@ -109,7 +109,7 @@ def generate_code(state: AgentState) -> Dict:
             "iterations": state.get("iterations", 0) + 1
         }
 
-    # Системный промпт (УЛУЧШЕНО ПРАВИЛО 7)
+    # Системный промпт
     system_msg = (
         "You are an expert Lua 5.5 developer for a LowCode platform.\n"
         "STRICT RULES:\n"
@@ -155,8 +155,8 @@ def generate_code(state: AgentState) -> Dict:
     return {"code": code, "iterations": state.get("iterations", 0) + 1}
 
 
+#Многоуровневая валидация: Синтаксис (luac) + Статический анализ (luacheck)
 def validate_code(state: AgentState) -> Dict:
-    """Многоуровневая валидация: Синтаксис (luac) + Статический анализ (luacheck)"""
     code = state["code"]
 
     if code.startswith("-- Пожалуйста") or code.startswith("-- Внимание") or code.startswith("-- Уточните"):
@@ -190,7 +190,7 @@ def validate_code(state: AgentState) -> Dict:
             '--formatter', 'plain'
         ], capture_output=True, text=True, timeout=5)
 
-        # luacheck возвращает 0 если всё идеально, или варнинги/ошибки
+        # luacheck возвращает 0 если всё идеально, или ошибки
         if lint_check.returncode > 0:
             # Берем только суть ошибки, без путей к временному файлу
             lint_errors = lint_check.stdout.replace(tmp_path, 'script.lua')

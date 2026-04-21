@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lua AI Agent | MTS Style</title>
     <style>
-        /* ================= ДИЗАЙН СИСТЕМА (ПЕРЕМЕННЫЕ) ================= */
+        /* ДИЗАЙН СИСТЕМЫ */
         :root {
             /* Светлая тема (по умолчанию) */
             --bg-page: #f2f2f2;
@@ -16,7 +16,7 @@
             --bg-bot-msg: #ffffff;
             --bg-code: #f8f9fa;
             --text-main: #000000;
-            --text-code: #000000; /* Сделали черным */
+            --text-code: #000000;
             --border-color: #e5e5e5;
             --primary-red: #E30611;
             --primary-red-hover: #cc050f;
@@ -44,7 +44,7 @@
             --shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
         }
 
-        /* ================= БАЗОВЫЕ СТИЛИ ================= */
+        /* БАЗОВЫЕ СТИЛИ */
         body {
             font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             background-color: var(--bg-page);
@@ -71,7 +71,7 @@
             transition: all 0.3s ease;
         }
 
-        /* ================= ШАПКА ================= */
+        /* ШАПКА */
         .chat-header {
             padding: 20px 24px;
             background: var(--bg-header);
@@ -106,7 +106,7 @@
         }
         .theme-btn:hover { border-color: var(--primary-red); }
 
-        /* ================= ИСТОРИЯ ЧАТА ================= */
+        /* ИСТОРИЯ ЧАТА  */
         .chat-history {
             flex: 1;
             padding: 24px;
@@ -153,7 +153,7 @@
             border-bottom-left-radius: 4px;
         }
 
-        /* ================= БЛОКИ КОДА И ИХ СКРОЛЛБАР ================= */
+        /* БЛОКИ КОДА И ИХ СКРОЛЛБАР  */
         pre {
             background: var(--bg-code);
             padding: 16px;
@@ -173,7 +173,7 @@
         pre::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 4px; }
         pre::-webkit-scrollbar-thumb:hover { background: #999; }
 
-        /* ================= ЗОНА ВВОДА ================= */
+        /* ЗОНА ВВОДА */
         .chat-input-wrapper {
             background: var(--bg-input-area);
             border-top: 1px solid var(--border-color);
@@ -256,7 +256,7 @@
         }
         .copy-btn:hover { background: var(--border-color); color: var(--text-main); }
 
-        /* ================= TOAST (УВЕДОМЛЕНИЕ) ================= */
+        /* УВЕДОМЛЕНИЕ  */
         .toast {
             visibility: hidden;
             min-width: 250px;
@@ -309,7 +309,7 @@
 <div id="toast" class="toast">✅ Код успешно скопирован!</div>
 
 <script>
-    // ================= ЛОГИКА ТЕМЫ (СВЕТЛАЯ/ТЕМНАЯ) =================
+    // ЛОГИКА ТЕМЫ
     function toggleTheme() {
         const body = document.body;
         const icon = document.getElementById('themeIcon');
@@ -330,7 +330,7 @@
         document.getElementById('themeIcon').innerText = '☀️';
     }
 
-    // ================= АВТОРАСШИРЕНИЕ ПОЛЯ ВВОДА =================
+    // АВТОРАСШИРЕНИЕ ПОЛЯ ВВОДА
     const textarea = document.getElementById('userInput');
     textarea.addEventListener('input', function() {
         this.style.height = 'auto'; // Сбрасываем высоту
@@ -338,7 +338,7 @@
         if (this.value === '') this.style.height = 'auto'; // Возврат к стандарту если пусто
     });
 
-    // ================= ОСНОВНАЯ ЛОГИКА АГЕНТА =================
+    // ОСНОВНАЯ ЛОГИКА АГЕНТА
     let lastGeneratedCode = "";
 
     async function sendMessage() {
@@ -404,7 +404,7 @@
         chat.scrollTop = chat.scrollHeight;
     }
 
-    // ================= ОБРАБОТКА ENTER И SHIFT+ENTER =================
+    // ОБРАБОТКА ENTER И SHIFT+ENTER
     function handleEnter(e) {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault(); // Предотвращаем перенос строки

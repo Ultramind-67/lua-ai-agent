@@ -43,7 +43,6 @@ def generate_script(request: GenerateRequest):
     errors = final_state.get("errors", "")
 
     # Если после 3 попыток код все еще с ошибками, оборачиваем ошибку в Lua-комментарий,
-    # чтобы не сломать парсер на стороне проверяющей системы.
     if errors and final_state["iterations"] >= 3:
         safe_error = errors.replace('\n', ' ')
         code_result = f"-- Внимание: Не удалось сгенерировать валидный код за 3 итерации.\n-- Последняя ошибка: {safe_error}\n\n{code_result}"
